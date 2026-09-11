@@ -1,0 +1,909 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>픽앤쿡 (Pick & Cook) - 100+ 레시피 & 스마트 추천</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Google Fonts (Noto Sans KR) -->
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#fff7ed',
+              100: '#ffedd5',
+              500: '#f97316',
+              600: '#ea580c',
+              700: '#c2410c',
+            }
+          },
+          fontFamily: {
+            sans: ['Noto Sans KR', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #f8fafc;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+    .shake-animation {
+      animation: shake 0.5s ease-in-out;
+    }
+    @keyframes shake {
+      0%, 100% { transform: rotate(0deg); }
+      20% { transform: rotate(-5deg); }
+      40% { transform: rotate(5deg); }
+      60% { transform: rotate(-3deg); }
+      80% { transform: rotate(3deg); }
+    }
+  </style>
+</head>
+<body class="bg-slate-100 text-slate-800 font-sans min-h-screen flex flex-col">
+
+  <!-- Header -->
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
+    <div class="max-w-6xl mx-auto px-4 py-3 flex justify-between items-center gap-2">
+      <div class="flex items-center space-x-2.5 cursor-pointer" onclick="resetAll()">
+        <div class="w-9 h-9 bg-brand-500 text-white rounded-xl flex items-center justify-center text-lg shadow-sm">
+          <i class="fa-solid fa-utensils"></i>
+        </div>
+        <div>
+          <h1 class="text-lg font-black text-slate-900 leading-none">픽앤쿡 <span class="text-xs font-bold text-brand-500 bg-brand-50 px-1.5 py-0.5 rounded-md border border-brand-100">100+ Pro</span></h1>
+          <p class="text-[11px] text-slate-500">100가지 이상 맛있는 레시피 검색 & 랜덤 추천</p>
+        </div>
+      </div>
+
+      <div class="flex items-center space-x-2">
+        <button onclick="exportRecipesJSON()" class="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition-all shadow-sm flex items-center gap-1.5" title="레시피 데이터 다운로드">
+          <i class="fa-solid fa-download"></i>
+          <span class="hidden sm:inline">레시피 DB 다운로드</span>
+        </button>
+        <button onclick="pickRandomGlobal()" class="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold rounded-xl transition-all shadow-sm flex items-center gap-1.5">
+          <i class="fa-solid fa-dice text-sm"></i>
+          <span>오늘 뭐 먹지?</span>
+        </button>
+        <button onclick="resetAll()" class="p-2 text-slate-400 hover:text-slate-600 transition-colors" title="전체 초기화">
+          <i class="fa-solid fa-rotate-right text-sm"></i>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="max-w-6xl mx-auto px-4 py-5 flex-1 w-full space-y-6">
+
+    <!-- Top Ingredient Picker Card -->
+    <section class="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200 shadow-sm space-y-3">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h2 class="text-base font-bold text-slate-900 flex items-center gap-2">
+            <i class="fa-solid fa-basket-shopping text-brand-500"></i>
+            냉장고 재료 선택하기
+          </h2>
+          <p class="text-xs text-slate-500">보유 중인 재료를 클릭하여 레시피 매칭율을 확인해보세요.</p>
+        </div>
+
+        <!-- Quick Random Pick Button for selected ingredients -->
+        <button 
+          onclick="pickRandomFromSelected()" 
+          class="px-3.5 py-2 bg-gradient-to-r from-brand-500 to-amber-500 hover:from-brand-600 hover:to-amber-600 text-white text-xs font-bold rounded-xl transition-all shadow-sm flex items-center justify-center gap-1.5"
+        >
+          <i class="fa-solid fa-shuffle"></i>
+          <span>선택한 재료로 랜덤 뽑기!</span>
+        </button>
+      </div>
+
+      <!-- Ingredient Input -->
+      <form onsubmit="handleAddCustomIngredient(event)" class="flex gap-2">
+        <input 
+          type="text" 
+          id="ingredient-input" 
+          placeholder="재료 이름 직접 입력 후 엔터 (예: 감자, 두부, 차돌박이)" 
+          class="flex-1 px-3.5 py-2 text-xs sm:text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-brand-500 transition-colors"
+        />
+        <button type="submit" class="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white font-medium text-xs sm:text-sm rounded-xl transition-colors">
+          추가
+        </button>
+      </form>
+
+      <!-- Selected Ingredient Badges -->
+      <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 flex flex-wrap items-center gap-1.5 min-h-[46px]">
+        <span class="text-xs font-bold text-slate-400 mr-1">선택된 재료:</span>
+        <div id="selected-tags" class="flex flex-wrap gap-1.5">
+          <!-- Tags loaded dynamically -->
+        </div>
+      </div>
+
+      <!-- Quick Choice Ingredients -->
+      <div class="space-y-1.5">
+        <div class="text-[11px] font-bold text-slate-400">자주 쓰는 추천 재료:</div>
+        <div id="quick-ingredients" class="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto p-1 border border-slate-100 rounded-xl bg-slate-50/50">
+          <!-- Buttons loaded dynamically -->
+        </div>
+      </div>
+
+      <!-- Synergy Recommendation Bar -->
+      <div id="synergy-box" class="pt-2 border-t border-slate-100 hidden">
+        <div class="text-xs font-bold text-amber-600 mb-1.5 flex items-center gap-1">
+          <i class="fa-solid fa-wand-magic-sparkles"></i>
+          <span>어울리는 조합 재료 추천:</span>
+        </div>
+        <div id="synergy-list" class="flex flex-wrap gap-1.5">
+          <!-- Synergy buttons -->
+        </div>
+      </div>
+    </section>
+
+    <!-- Main Content: Recipe List & Filter Header -->
+    <section class="space-y-4">
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-white p-3.5 rounded-2xl border border-slate-200 shadow-sm">
+        
+        <div class="flex items-center gap-2">
+          <h3 class="text-base font-bold text-slate-900">레시피 목록</h3>
+          <span id="recipe-count-badge" class="text-xs font-extrabold bg-brand-100 text-brand-700 px-2.5 py-0.5 rounded-full">0개</span>
+        </div>
+
+        <!-- Search & Filter Controls -->
+        <div class="flex flex-wrap items-center gap-2 flex-1 md:justify-end">
+          <!-- Text Search Bar -->
+          <div class="relative min-w-[180px] flex-1 md:flex-initial">
+            <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-400 text-xs"></i>
+            <input 
+              type="text" 
+              id="search-input" 
+              oninput="handleSearchInput()" 
+              placeholder="요리명 또는 재료 검색..." 
+              class="w-full pl-8 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-brand-500"
+            />
+          </div>
+
+          <!-- Category Filter -->
+          <select id="category-filter" onchange="renderRecipes(true)" class="text-xs bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 font-medium text-slate-700">
+            <option value="all">전체 카테고리</option>
+            <option value="한식">한식</option>
+            <option value="양식">양식</option>
+            <option value="일식">일식/중식</option>
+            <option value="간식">간식/분식</option>
+          </select>
+
+          <!-- Sort Filter -->
+          <select id="sort-select" onchange="renderRecipes(true)" class="text-xs bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 font-medium text-slate-700">
+            <option value="match">재료 일치순</option>
+            <option value="preference">좋아요순</option>
+            <option value="time">조리시간 짧은순</option>
+            <option value="title">이름 가나다순</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Recipe Card Grid -->
+      <div id="recipe-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        <!-- Recipe cards dynamically rendered -->
+      </div>
+
+      <!-- Load More Button -->
+      <div id="load-more-container" class="text-center pt-2 hidden">
+        <button onclick="loadMoreRecipes()" class="px-6 py-2.5 bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold rounded-xl transition-all shadow-sm">
+          레시피 더보기 (<span id="load-more-count">0</span>개 남음)
+        </button>
+      </div>
+
+      <!-- Empty State -->
+      <div id="empty-state" class="hidden text-center py-12 bg-white rounded-2xl border border-dashed border-slate-200 p-6">
+        <i class="fa-solid fa-utensils text-4xl text-slate-300 mb-2"></i>
+        <p class="text-sm font-bold text-slate-600 mb-1">일치하는 레시피가 없습니다</p>
+        <p class="text-xs text-slate-400 mb-4">검색어를 바꾸거나 재료를 추가해 보세요.</p>
+        <button onclick="resetSearchAndFilters()" class="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-xs font-bold text-slate-700 rounded-lg">
+          검색 및 필터 초기화
+        </button>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Recipe Detail Modal -->
+  <div id="recipe-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden max-h-[85vh] flex flex-col">
+      <!-- Modal Header -->
+      <div class="bg-brand-500 text-white p-5 relative">
+        <button onclick="closeRecipeModal()" class="absolute top-4 right-4 w-7 h-7 bg-black/20 hover:bg-black/40 rounded-full flex items-center justify-center text-white">
+          <i class="fa-solid fa-xmark text-sm"></i>
+        </button>
+        <span id="modal-category" class="text-[10px] font-bold uppercase bg-white/20 px-2 py-0.5 rounded-md mb-1 inline-block">카테고리</span>
+        <h3 id="modal-title" class="text-xl font-extrabold">요리 이름</h3>
+        <p id="modal-desc" class="text-xs text-white/90 mt-1 line-clamp-2">요리 설명</p>
+        
+        <div class="flex items-center gap-3 mt-3 text-xs text-amber-100 font-medium">
+          <span><i class="fa-regular fa-clock mr-1"></i><span id="modal-time">15분</span></span>
+          <span><i class="fa-solid fa-gauge-high mr-1"></i><span id="modal-difficulty">쉬움</span></span>
+        </div>
+      </div>
+
+      <!-- Modal Content -->
+      <div class="p-5 overflow-y-auto space-y-4 flex-1">
+        <!-- Ingredients -->
+        <div>
+          <h4 class="text-xs font-bold text-slate-800 mb-2 flex items-center gap-1.5">
+            <i class="fa-solid fa-carrot text-brand-500"></i> 필요 재료
+          </h4>
+          <div id="modal-ingredients" class="flex flex-wrap gap-1">
+            <!-- Modal Ingredients -->
+          </div>
+        </div>
+
+        <hr class="border-slate-100" />
+
+        <!-- Steps -->
+        <div>
+          <h4 class="text-xs font-bold text-slate-800 mb-2 flex items-center gap-1.5">
+            <i class="fa-solid fa-list-ol text-brand-500"></i> 조리 과정
+          </h4>
+          <ol id="modal-steps" class="space-y-2 text-xs text-slate-700">
+            <!-- Cooking steps -->
+          </ol>
+        </div>
+
+        <!-- Tip -->
+        <div class="bg-amber-50 p-3 rounded-xl border border-amber-200/60 text-xs text-amber-900 flex items-start gap-2">
+          <i class="fa-solid fa-lightbulb text-amber-500 mt-0.5"></i>
+          <div>
+            <span class="font-bold">조리 팁: </span>
+            <span id="modal-tip">팁 내용</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="p-3 bg-slate-50 border-t border-slate-100 flex items-center justify-between text-xs">
+        <span class="text-slate-500">이 레시피가 마음에 드시나요?</span>
+        <div id="modal-vote-btns" class="flex gap-1.5">
+          <!-- Dynamic vote buttons -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Random Pick Highlight Modal -->
+  <div id="random-modal" class="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div id="random-modal-card" class="bg-white w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden p-6 text-center space-y-4 transform transition-all">
+      <div class="w-16 h-16 bg-gradient-to-tr from-amber-400 to-brand-500 text-white rounded-2xl flex items-center justify-center text-3xl mx-auto shadow-lg shadow-brand-500/30 animate-bounce">
+        <i class="fa-solid fa-dice"></i>
+      </div>
+
+      <div>
+        <span class="text-xs font-bold text-brand-600 bg-brand-50 px-2.5 py-1 rounded-full">오늘의 추천 메뉴!</span>
+        <h3 id="random-title" class="text-2xl font-black text-slate-900 mt-2">요리 이름</h3>
+        <p id="random-desc" class="text-xs text-slate-500 mt-1">간단 요리 설명이 표시됩니다.</p>
+      </div>
+
+      <div class="bg-slate-50 p-3 rounded-xl border border-slate-100 text-xs text-slate-600 space-y-1">
+        <div id="random-match-info" class="font-bold text-emerald-600">필요 재료 보유 현황</div>
+        <div id="random-ingredients-summary" class="text-slate-400 truncate">재료 요약</div>
+      </div>
+
+      <div class="flex gap-2 pt-2">
+        <button onclick="rerunRandomPick()" class="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-colors">
+          <i class="fa-solid fa-rotate-right mr-1"></i> 다시 뽑기
+        </button>
+        <button id="random-view-btn" onclick="" class="flex-1 py-2.5 bg-brand-500 hover:bg-brand-600 text-white text-xs font-bold rounded-xl transition-colors shadow-md shadow-brand-500/20">
+          레시피 보기
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="bg-white border-t border-slate-200 mt-8 py-5 text-center text-xs text-slate-400">
+    <p class="font-medium text-slate-500">픽앤쿡 (Pick & Cook) - 총 <span id="footer-recipe-count" class="font-bold text-brand-500">105</span>개 요리 데이터 제공 중</p>
+  </footer>
+
+  <!-- Logic & Data -->
+  <script>
+    // 1. Ingredients List
+    const ALL_INGREDIENTS = [
+      "돼지고기", "김치", "계란", "양파", "대파", "마늘", "두부", 
+      "스팸", "감자", "당근", "소고기", "닭고기", "어묵", "치즈",
+      "버섯", "콩나물", "파스타면", "식빵", "참치", "고추", "떡", "우유",
+      "베이컨", "오징어", "무", "시금치", "청경채", "연어", "새우", "굴소스", "골뱅이"
+    ];
+
+    const INGREDIENT_SYNERGY = {
+      "김치": ["돼지고기", "두부", "스팸", "대파", "참치"],
+      "돼지고기": ["양파", "마늘", "대파", "김치", "버섯", "고추"],
+      "계란": ["대파", "양파", "치즈", "식빵", "감자", "우유", "토마토"],
+      "두부": ["김치", "대파", "마늘", "소고기", "버섯"],
+      "스팸": ["계란", "김치", "양파", "치즈"],
+      "감자": ["양파", "당근", "소고기", "치즈", "베이컨"],
+      "소고기": ["양파", "버섯", "마늘", "대파", "무"],
+      "닭고기": ["양파", "감자", "당근", "마늘", "우유"],
+      "식빵": ["계란", "치즈", "스팸", "우유", "베이컨"],
+      "참치": ["김치", "양파", "마늘", "계란"],
+      "떡": ["어묵", "대파", "계란", "치즈"],
+      "파스타면": ["마늘", "양파", "버섯", "치즈", "우유", "토마토", "베이컨", "새우"]
+    };
+
+    // 2. Comprehensive 100+ Recipe Database
+    const RECIPES_DATA = [
+      { id: "r1", title: "돼지고기 김치찌개", category: "한식", time: "25분", difficulty: "쉬움", ingredients: ["돼지고기", "김치", "두부", "대파", "마늘"], description: "남은 김치와 돼지고기를 칼칼하게 끓여내는 대표 찌개", steps: ["돼지고기와 김치를 잘라 기름에 달달 볶습니다.", "물을 붓고 팔팔 끓인 뒤 두부, 마늘, 대파를 넣습니다."], tip: "설탕 반 스푼을 넣으면 시큼한 맛이 잡힙니다." },
+      { id: "r2", title: "스팸 파기름 김치볶음밥", category: "한식", time: "15분", difficulty: "초급", ingredients: ["김치", "스팸", "대파", "계란"], description: "대파 기름 향이 가득 나는 중독성 강한 김치볶음밥", steps: ["대파로 기름을 낸 뒤 스팸과 김치를 볶습니다.", "밥을 넣고 골고루 섞은 뒤 계란 프라이를 올립니다."], tip: "간장을 팬 가장자리에 끓여 불향을 내보세요." },
+      { id: "r3", title: "치즈 폭탄 계란말이", category: "간식", time: "10분", difficulty: "보통", ingredients: ["계란", "대파", "치즈"], description: "고소한 치즈가 쭉 늘어나는 인기 반찬", steps: ["계란물에 다진 대파를 섞어 팬에 붓습니다.", "치즈를 올리고 돌돌 말아 두껍게 구워냅니다."], tip: "우유 한 스푼을 추가하면 한층 촉촉해집니다." },
+      { id: "r4", title: "바삭 감자전", category: "간식", time: "20분", difficulty: "쉬움", ingredients: ["감자", "양파"], description: "감자 본연의 고소함과 바삭한 식감이 일품인 전", steps: ["감자와 양파를 가강 채를 썹니다.", "전분을 살짝 더해 노릇하게 구워냅니다."], tip: "채썰어 구우면 훨씬 더 바삭합니다." },
+      { id: "r5", title: "소고기 버섯 덮밥", category: "한식", time: "20분", difficulty: "보통", ingredients: ["소고기", "버섯", "양파", "대파", "마늘"], description: "단짠 양념으로 쓱쓱 비벼먹는 간편한 덮밥", steps: ["소고기와 채소를 간장 소스에 볶습니다.", "자작하게 졸인 후 밥 위에 올려줍니다."], tip: "참기름 한 방울로 고소함을 더하세요." },
+      { id: "r6", title: "달콤 프렌치 토스트", category: "간식", time: "10분", difficulty: "초급", ingredients: ["식빵", "계란", "우유"], description: "겉은 노릇하고 속은 촉촉한 브런치 토스트", steps: ["계란, 우유, 설탕을 섞어 식빵을 적십니다.", "버터를 두른 팬에 노릇하게 구워냅니다."], tip: "메이플 시럽을 곁들이면 최고입니다." },
+      { id: "r7", title: "두부 김치 두루치기", category: "한식", time: "20분", difficulty: "쉬움", ingredients: ["두부", "김치", "돼지고기", "양파"], description: "따뜻한 두부와 매콤한 김치 볶음의 조합", steps: ["두부는 따뜻하게 데쳐 썰어둡니다.", "돼지고기와 김치, 양파를 매콤하게 볶아 곁들입니다."], tip: "참깨를 뿌려 마무리하세요." },
+      { id: "r8", title: "매콤 떡볶이", category: "간식", time: "15분", difficulty: "쉬움", ingredients: ["떡", "어묵", "대파", "고추"], description: "국민 간식 매콤달콤 떡볶이", steps: ["고추장, 설탕, 간장 육수를 만듭니다.", "떡과 어묵, 대파를 넣고 조려냅니다."], tip: "어묵 육수가 배어들면 국물 맛이 살아납니다." },
+      { id: "r9", title: "알리오 올리오 파스타", category: "양식", time: "15분", difficulty: "보통", ingredients: ["파스타면", "마늘", "고추"], description: "마늘 향과 깔끔한 오일이 어우러진 파스타", steps: ["마늘 슬라이스와 고추를 올리브유에 볶습니다.", "삶은 면과 면수를 넣고 자작하게 볶아냅니다."], tip: "마늘을 노릇하게 태우지 않고 볶는 것이 핵심입니다." },
+      { id: "r10", title: "참치 마요 덮밥", category: "일식", time: "10분", difficulty: "초급", ingredients: ["참치", "계란", "양파"], description: "고소한 마요네즈와 참치의 단짠 덮밥", steps: ["참치 기름을 빼고 계란 스크램블을 만듭니다.", "간장 양파 볶음과 참치, 마요네즈를 올립니다."], tip: "김가루를 뿌리면 훨씬 깔끔합니다." },
+      { id: "r11", title: "콩나물 국밥", category: "한식", time: "15분", difficulty: "쉬움", ingredients: ["콩나물", "대파", "마늘", "계란"], description: "속이 시원하게 풀리는 깔끔한 국물", steps: ["육수에 콩나물과 다진 마늘을 넣고 끓입니다.", "대파와 계란을 풀어 넣어 완성합니다."], tip: "청양고추를 살짝 넣으면 얼큰해집니다." },
+      { id: "r12", title: "소고기 떡국", category: "한식", time: "20분", difficulty: "쉬움", ingredients: ["떡", "소고기", "계란", "대파", "마늘"], description: "구수한 육수에 쫄깃한 떡이 매력적인 떡국", steps: ["소고기를 참기름에 볶다가 물을 붓습니다.", "떡을 넣고 끓인 후 계란 지단을 올립니다."], tip: "떡을 미리 물에 불려두면 금방 익습니다." },
+      { id: "r13", title: "크림 파스타", category: "양식", time: "20분", difficulty: "보통", ingredients: ["파스타면", "우유", "치즈", "마늘", "버섯"], description: "부드럽고 고소한 간단 크림 파스타", steps: ["마늘과 버섯을 버터에 볶습니다.", "우유와 치즈를 넣어 소스를 만든 뒤 면을 볶습니다."], tip: "슬라이스 치즈 2장으로 꾸덕함을 조절하세요." },
+      { id: "r14", title: "닭갈비 볶음", category: "한식", time: "25분", difficulty: "보통", ingredients: ["닭고기", "양파", "대파", "고추", "떡"], description: "매콤달콤한 양념에 채소와 닭고기를 볶는 요리", steps: ["닭고기를 고추장 양념에 재워둡니다.", "채소, 떡과 함께 센 불에 볶아냅니다."], tip: "남은 양념에 밥을 볶아 드세요." },
+      { id: "r15", title: "어묵탕", category: "한식", time: "15분", difficulty: "초급", ingredients: ["어묵", "대파", "무", "마늘"], description: "뜨끈한 국물이 생각날 때 뚝딱 만드는 어묵탕", steps: ["무로 육수를 내고 어묵을 넣습니다.", "국간장과 소금으로 간을 한 뒤 대파를 올립니다."], tip: "와사비 간장에 찍어 드세요." },
+      { id: "r16", title: "계란 볶음밥", category: "일식", time: "10분", difficulty: "초급", ingredients: ["계란", "대파", "양파"], description: "고소하고 담백한 스피드 볶음밥", steps: ["대파 기름을 낸 뒤 계란 스크램블을 만듭니다.", "찬밥을 넣어 고슬고슬 볶아냅니다."], tip: "굴소스를 살짝 넣으면 간이 딱 맞아집니다." },
+      { id: "r17", title: "감자 채볶음", category: "한식", time: "12분", difficulty: "초급", ingredients: ["감자", "당근", "양파"], description: "담백하고 고소한 매일 밑반찬", steps: ["감자, 당근, 양파를 채 썹니다.", "감자 전분을 뺀 후 기름에 볶아 소금간을 합니다."], tip: "감자를 살짝 데쳐 볶으면 부러지지 않습니다." },
+      { id: "r18", title: "스팸 감자 짜글이", category: "한식", time: "25분", difficulty: "쉬움", ingredients: ["스팸", "감자", "양파", "대파", "고추"], description: "스팸을 으깨 넣어 자작하게 끓인 짜글이", steps: ["으깬 스팸과 감자, 양파, 양념을 냄비에 넣습니다.", "물이 자작해질 때까지 푹 조려냅니다."], tip: "밥에 비벼 먹기 최고의 메뉴입니다." },
+
+      { id: "r19", title: "구수한 된장찌개", category: "한식", time: "20분", difficulty: "쉬움", ingredients: ["두부", "감자", "양파", "대파", "마늘"], description: "구수한 된장과 보슬보슬 두부의 정석 찌개", steps: ["육수에 된장을 풀고 감자와 양파를 넣습니다.", "두부와 대파를 넣고 10분간 더 끓여냅니다."], tip: "청양고추를 넣어 칼칼하게 드세요." },
+      { id: "r20", title: "얼큰 순두부찌개", category: "한식", time: "20분", difficulty: "보통", ingredients: ["두부", "돼지고기", "계란", "대파", "고추"], description: "몽글몽글 순두부와 고추기름의 얼큰한 조화", steps: ["돼지고기를 고춧가루와 볶아 고추기름을 냅니다.", "물을 붓고 순두부를 넣은 뒤 계란을 깨 넣습니다."], tip: "마지막에 계란 노른자를 터뜨리지 않고 익힙니다." },
+      { id: "r21", title: "매콤 제육볶음", category: "한식", time: "20분", difficulty: "쉬움", ingredients: ["돼지고기", "양파", "대파", "마늘", "고추"], description: "불향 가득 매콤한 양념의 돼지고기 볶음", steps: ["돼지고기에 고추장 양념을 버무립니다.", "양파, 대파와 함께 센 불에서 센 불로 볶아냅니다."], tip: "마지막에 깻잎을 넣으면 더욱 상큼합니다." },
+      { id: "r22", title: "단짠 소불고기", category: "한식", time: "25분", difficulty: "보통", ingredients: ["소고기", "양파", "버섯", "대파", "마늘"], description: "남녀노소 좋아하는 달콤 짭조름한 소불고기", steps: ["소고기를 간장, 설탕, 마늘 양념에 재웁니다.", "버섯, 양파와 함께 국물이 자작하게 볶습니다."], tip: "당면을 미리 불려 넣어도 아주 맛있습니다." },
+      { id: "r23", title: "칼칼 닭볶음탕", category: "한식", time: "40분", difficulty: "보통", ingredients: ["닭고기", "감자", "당근", "양파", "대파"], description: "포슬포슬 감자와 매콤한 닭고기의 조화", steps: ["닭을 데친 후 양념장과 감자, 당근을 넣습니다.", "국물이 자작해질 때까지 푹 조려냅니다."], tip: "양파를 듬뿍 넣으면 자연스러운 단맛이 납니다." },
+      { id: "r24", title: "폭신 계란찜", category: "한식", time: "10분", difficulty: "초급", ingredients: ["계란", "대파", "당근"], description: "부드럽고 촉촉하게 부풀어 오르는 계란찜", steps: ["계란과 물, 소금을 2:1 비율로 잘 섞습니다.", "약불에서 저어가며 뚝배기에 익혀 부풀려줍니다."], tip: "참기름 한 방울을 두르면 향이 좋아집니다." },
+      { id: "r25", title: "쫄깃 오징어 볶음", category: "한식", time: "15분", difficulty: "보통", ingredients: ["오징어", "양파", "대파", "고추", "당근"], description: "매콤한 양념과 센 불에 감칠맛 나는 오징어", steps: ["오징어를 먹기 좋게 칼집을 내어 썰어둡니다.", "채소와 오징어를 매콤 양념과 함께 센 불에 볶습니다."], tip: "오징어는 너무 오래 볶으면 질겨지니 단시간 볶습니다." },
+      { id: "r26", title: "푸짐 부대찌개", category: "한식", time: "25분", difficulty: "쉬움", ingredients: ["스팸", "어묵", "두부", "김치", "대파", "치즈"], description: "햄과 김치, 사리까지 푸짐한 종합 찌개", steps: ["냄비에 재료를 예쁘게 둘러 담습니다.", "사골육수나 물을 붓고 양념장과 함께 끓입니다."], tip: "슬라이스 치즈를 올리면 국물이 고소해집니다." },
+      { id: "r27", title: "뜨끈 잔치국수", category: "한식", time: "15분", difficulty: "초급", ingredients: ["계란", "대파", "당근", "김치"], description: "멸치 육수에 깔끔하게 말아먹는 잔치국수", steps: ["멸치 육수를 우려내어 간장으로 간합니다.", "삶은 소면에 육수를 붓고 계란지단과 김치를 올립니다."], tip: "양념장을 별도로 곁들여 드세요." },
+      { id: "r28", title: "새콤 비빔국수", category: "한식", time: "12분", difficulty: "초급", ingredients: ["계란", "양파", "김치", "고추"], description: "입맛 돋우는 새콤달콤 비빔 소면", steps: ["고추장, 식초, 설탕, 참기름으로 비빔장을 만듭니다.", "삶은 소면과 다진 김치, 양념을 싹싹 비벼줍니다."], tip: "삶은 계란을 얹어 매운맛을 달래세요." },
+      { id: "r29", title: "바삭 김치전", category: "간식", time: "15분", difficulty: "초급", ingredients: ["김치", "양파", "대파", "오징어"], description: "비 오는 날 생각나는 바삭하고 매콤한 전", steps: ["다진 김치와 부침가루, 차가운 물을 섞습니다.", "팬에 기름을 넉넉히 둘러 바삭하게 구워냅니다."], tip: "탄산수나 차가운 물을 쓰면 더 바삭합니다." },
+      { id: "r30", title: "해물 파전", category: "한식", time: "20분", difficulty: "보통", ingredients: ["대파", "오징어", "새우", "계란"], description: "쪽파와 해물이 가득 들어간 주막 스타일 전", steps: ["쪽파를 길게 깔고 부침 반죽을 부어줍니다.", "오징어, 새우를 올리고 계란물을 풀어 구워냅니다."], tip: "중약불에서 충분히 구워 속까지 익히세요." },
+      { id: "r31", title: "달달 애호박전", category: "한식", time: "10분", difficulty: "초급", ingredients: ["계란"], description: "노란 옷을 입은 달콤 고소한 애호박 반찬", steps: ["애호박을 동글동글 썰어 소금을 살짝 뿌립니다.", "부침가루와 계란 옷을 입혀 구워냅니다."], tip: "소금을 뿌려 미리 물기를 빼두면 좋습니다." },
+      { id: "r32", title: "구수한 미역국", category: "한식", time: "30분", difficulty: "쉬움", ingredients: ["소고기", "마늘"], description: "소고기 육수가 깊게 우러난 보양 미역국", steps: ["불린 미역과 소고기를 참기름에 볶습니다.", "물을 붓고 다진 마늘과 국간장으로 푹 끓여냅니다."], tip: "오래 끓일수록 국물 맛이 깊어집니다." },
+      { id: "r33", title: "시원 소고기 무국", category: "한식", time: "25분", difficulty: "쉬움", ingredients: ["소고기", "무", "대파", "마늘"], description: "무의 시원함과 소고기의 고소함이 담긴 국", steps: ["소고기와 깍둑썬 무를 참기름에 볶습니다.", "물을 붓고 푹 끓인 뒤 대파를 넣어 마무리합니다."], tip: "거품을 잘 거둬내면 국물이 깔끔해집니다." },
+      { id: "r34", title: "고소 콩나물무침", category: "한식", time: "10분", difficulty: "초급", ingredients: ["콩나물", "대파", "마늘"], description: "아삭아삭 매일 식탁에 올라오는 기본 반찬", steps: ["콩나물을 소금물에 3~4분 삶아냅니다.", "다진 마늘, 참기름, 소금, 대파로 조물조물 무칩니다."], tip: "삶을 때 뚜껑을 열거나 닫거나 하나로 유지하세요." },
+      { id: "r35", title: "시금치 나물무침", category: "한식", time: "10분", difficulty: "초급", ingredients: ["시금치", "마늘", "대파"], description: "달큰하고 영양 가득한 시금치 반찬", steps: ["시금치를 끓는 물에 30초간 둔 뒤 찬물에 헹굽니다.", "물기를 꼭 짜고 국간장과 참기름으로 무칩니다."], tip: "데치는 시간이 너무 길지 않도록 주의하세요." },
+      { id: "r36", title: "새콤 무생채", category: "한식", time: "15분", difficulty: "초급", ingredients: ["무", "대파", "마늘", "고추"], description: "입맛을 사로잡는 아삭아삭 무생채", steps: ["무를 얇게 채 썰어 고춧가루로 먼저 물을 들입니다.", "식초, 설탕, 다진 마늘, 멸치액젓으로 무쳐냅니다."], tip: "밥에 비벼먹으면 입맛이 살아납니다." },
+      { id: "r37", title: "간장 어묵볶음", category: "한식", time: "10분", difficulty: "초급", ingredients: ["어묵", "양파", "당근", "대파"], description: "단짠 양념으로 볶아내는 초간단 밑반찬", steps: ["어묵과 채소를 한입 크기로 잘라줍니다.", "팬에 기름을 두르고 간장, 물엿 양념에 볶습니다."], tip: "마지막에 통깨를 뿌려 고소함을 살리세요." },
+      { id: "r38", title: "바삭 멸치볶음", category: "한식", time: "10분", difficulty: "초급", ingredients: ["마늘"], description: "달콤 바삭한 영양 만점 멸치 반찬", steps: ["멸치를 기름 없이 팬에 볶아 비린내를 날립니다.", "식용유, 마늘, 간장, 올리고당 소스에 빠르게 볶습니다."], tip: "불을 끄고 올리고당을 넣어야 딱딱해지지 않습니다." },
+      { id: "r39", title: "추억의 쏘야 (소세지 야채볶음)", category: "간식", time: "12분", difficulty: "초급", ingredients: ["양파", "당근", "버섯"], description: "케첩 소스의 새콤달콤 안주 겸 반찬", steps: ["비엔나 소세지에 칼집을 넣고 채소를 썹니다.", "케첩, 돈까스소스, 올리고당 소스로 볶습니다."], tip: "칼집이 벌어질 때까지 잘 볶아주세요." },
+      { id: "r40", title: "초간단 계란국", category: "한식", time: "8분", difficulty: "초급", ingredients: ["계란", "대파", "마늘"], description: "바쁜 아침 5분 만에 끓이는 부드러운 국", steps: ["멸치 육수나 맹물에 국간장으로 간합니다.", "풀어둔 계란물을 두르고 대파를 올려 불을 끕니다."], tip: "계란을 넣은 뒤 저어주지 않아야 국물이 깔끔합니다." },
+      { id: "r41", title: "칼칼 동태찌개", category: "한식", time: "30분", difficulty: "보통", ingredients: ["무", "두부", "대파", "마늘", "고추"], description: "시원하고 칼칼한 동태 해장 찌개", steps: ["무와 양념장을 넣고 육수를 끓입니다.", "동태와 두부, 고추를 넣고 매콤하게 우려냅니다."], tip: "미나리나 쑥갓을 넣으면 향이 더 좋습니다." },
+      { id: "r42", title: "구수한 청국장찌개", category: "한식", time: "20분", difficulty: "쉬움", ingredients: ["두부", "김치", "돼지고기", "대파", "마늘"], description: "진한 시골 손맛 청국장", steps: ["돼지고기와 김치를 볶다가 물을 붓습니다.", "청국장을 풀고 두부, 대파를 넣어 끓여냅니다."], tip: "신김치를 약간 넣어야 깔끔한 맛이 납니다." },
+      { id: "r43", title: "고등어 무조림", category: "한식", time: "35분", difficulty: "보통", ingredients: ["무", "양파", "대파", "마늘", "고추"], description: "양념이 잘 밴 무와 고소한 고등어", steps: ["냄비 바닥에 무를 깔고 고등어를 올립니다.", "간장, 고춧가루 양념을 얹어 무가 푹 익도록 졸입니다."], tip: "쌀뜨물을 사용하면 비린내가 싹 사라집니다." },
+      { id: "r44", title: "달콤 갈치조림", category: "한식", time: "30분", difficulty: "보통", ingredients: ["무", "양파", "대파", "마늘", "고추"], description: "부드러운 갈치살과 양념 무의 조화", steps: ["무와 감자를 깔고 갈치를 놓습니다.", "양념장을 부어 중불에서 졸여냅니다."], tip: "국물을 자작하게 얹어가며 졸여주세요." },
+      { id: "r45", title: "안동 찜닭", category: "한식", time: "40분", difficulty: "보통", ingredients: ["닭고기", "감자", "당근", "양파", "대파"], description: "간장 양념에 당면까지 들어간 찜닭", steps: ["닭을 데쳐 간장, 굴소스 양념에 끓입니다.", "감자, 당근을 넣고 마지막에 불린 당면을 넣습니다."], tip: "건고추를 넣으면 칼칼한 풍미가 생깁니다." },
+      { id: "r46", title: "진한 닭곰탕", category: "한식", time: "45분", difficulty: "보통", ingredients: ["닭고기", "대파", "마늘"], description: "담백하고 속 깊은 영양 닭 국물", steps: ["닭과 마늘, 대파를 넣고 푹 삶아냅니다.", "살을 찢어 간을 하고 국물에 다시 말아냅니다."], tip: "후춧가루를 톡톡 뿌려 드세요." },
+      { id: "r47", title: "야채 카레라이스", category: "일식", time: "25분", difficulty: "초급", ingredients: ["돼지고기", "감자", "당근", "양파"], description: "온 가족이 좋아하는 영양 카레", steps: ["고기와 깍둑썬 채소를 기름에 볶습니다.", "물을 붓고 익힌 뒤 카레 가루를 풀어서 완성합니다."], tip: "양파를 갈색이 될 때까지 볶으면 풍미가 높아집니다." },
+      { id: "r48", title: "하이라이스", category: "일식", time: "25분", difficulty: "초급", ingredients: ["소고기", "양파", "버섯"], description: "데미글라스 소스의 부드러운 덮밥", steps: ["소고기와 양파, 버섯을 버터에 볶습니다.", "하이라이스 소스와 물을 넣고 졸여냅니다."], tip: "우유를 살짝 넣으면 더욱 부드럽습니다." },
+      { id: "r49", title: "토마토 미트 파스타", category: "양식", time: "20분", difficulty: "쉬움", ingredients: ["파스타면", "돼지고기", "양파", "마늘", "치즈"], description: "상큼한 토마토 소스와 고기의 조화", steps: ["다진 고기와 채소를 볶다가 토마토 소스를 넣습니다.", "삶은 파스타면과 섞고 치즈를 올립니다."], tip: "면수를 약간 넣어 농도를 조절하세요." },
+      { id: "r50", title: "꾸덕 로제 파스타", category: "양식", time: "20분", difficulty: "보통", ingredients: ["파스타면", "우유", "마늘", "버섯", "베이컨"], description: "크림과 토마토가 만난 부드러운 파스타", steps: ["베이컨, 마늘, 버섯을 올리브유에 볶습니다.", "토마토 소스와 우유/생크림을 섞어 면을 볶아냅니다."], tip: "새우를 더하면 더욱 근사해집니다." },
+      { id: "r51", title: "바질 페스토 파스타", category: "양식", time: "15분", difficulty: "초급", ingredients: ["파스타면", "마늘", "치즈"], description: "향긋한 바질 풍미 가득한 오일 파스타", steps: ["파스타면을 삶아 준비합니다.", "올리브유, 마늘, 바질 페스토를 면과 가볍게 버무립니다."], tip: "불을 끄고 페스토를 섞어야 향이 살아납니다." },
+      { id: "r52", title: "시원 봉골레 파스타", category: "양식", time: "18분", difficulty: "보통", ingredients: ["파스타면", "마늘", "고추"], description: "조개 육수의 감칠맛이 폭발하는 파스타", steps: ["마늘과 페퍼론치노를 볶고 해감된 조개를 넣습니다.", "화이트 와인이나 물을 넣고 뚜껑을 닫아 조개를 엽니다."], tip: "면을 넣어 조개 육수가 잘 배게 볶아냅니다." },
+      { id: "r53", title: "버섯 크림 리조또", category: "양식", time: "25분", difficulty: "보통", ingredients: ["버섯", "양파", "마늘", "우유", "치즈"], description: "고소하고 녹진한 크림 쌀요리", steps: ["양파, 마늘, 버섯을 버터에 볶습니다.", "밥과 우유, 치즈를 넣고 부드럽게 졸여냅니다."], tip: "찬밥으로 만들어도 근사한 리조또가 됩니다." },
+      { id: "r54", title: "에그인헬 (샤쿠슈카)", category: "양식", time: "20분", difficulty: "보통", ingredients: ["계란", "양파", "마늘", "치즈", "스팸"], description: "지옥에 빠진 계란! 빵과 함께 먹는 요리", steps: ["양파, 스팸, 마늘을 토마토 소스에 볶습니다.", "계란을 위에 깨 넣고 치즈를 뿌린 뒤 뚜껑을 덮습니다."], tip: "바게트나 식빵에 얹어 드세요." },
+      { id: "r55", title: "감바스 알 아히요", category: "양식", time: "15분", difficulty: "쉬움", ingredients: ["새우", "마늘", "고추"], description: "올리브유에 마늘과 새우를 끓여내는 스페인 요리", steps: ["올리브유에 편마늘과 페퍼론치노를 약불로 끓입니다.", "새우를 넣고 소금, 후추로 간하여 익혀냅니다."], tip: "남은 오일에 면을 볶으면 알리오 올리오가 됩니다." },
+      { id: "r56", title: "진득 맥앤치즈", category: "양식", time: "15분", difficulty: "초급", ingredients: ["치즈", "우유", "베이컨"], description: "치즈 마니아를 위한 최고의 핑거 푸드", steps: ["삶은 마카로니나 면에 우유와 체다치즈를 넣습니다.", "치즈가 녹아 녹진해지면 베이컨 칩을 올립니다."], tip: "핫소스를 살짝 뿌리면 느끼함이 사라집니다." },
+      { id: "r57", title: "클램 차우더 스프", category: "양식", time: "25분", difficulty: "보통", ingredients: ["감자", "양파", "우유", "베이컨"], description: "따뜻하고 고소한 조개 크림 스프", steps: ["베이컨, 양파, 감자를 볶다가 밀가루를 살짝 넣습니다.", "우유와 조개 살을 넣고 부드럽게 끓여냅니다."], tip: "크래커를 얹어 드시면 더 좋습니다." },
+      { id: "r58", title: "프렌치 어니언 스프", category: "양식", time: "35분", difficulty: "보통", ingredients: ["양파", "치즈", "식빵"], description: "양파를 볶아 만든 달콤 깊은 스프", steps: ["양파를 갈색이 될 때까지 오래 카라멜라이징합니다.", "육수를 붓고 끓인 뒤 빵과 치즈를 얹어 녹입니다."], tip: "양파를 충분히 오랫동안 볶는 것이 핵심입니다." },
+      { id: "r59", title: "고르곤졸라 또띠아 피자", category: "양식", time: "10분", difficulty: "초급", ingredients: ["치즈", "마늘"], description: "꿀에 찍어먹는 초간단 피자", steps: ["또띠아 위에 다진 마늘과 치즈를 올립니다.", "에어프라이어나 팬에서 치즈가 녹을 때까지 구워냅니다."], tip: "꿀이나 올리고당에 찍어 드세요." },
+      { id: "r60", title: "페퍼로니 피자", category: "양식", time: "12분", difficulty: "초급", ingredients: ["식빵", "치즈", "스팸"], description: "식빵으로 만드는 짭조름 홈메이드 피자", steps: ["식빵에 토마토 케첩을 바릅니다.", "스팸이나 페퍼로니, 치즈를 듬뿍 올려 구워냅니다."], tip: "에어프라이어 180도 5분이면 완성됩니다." },
+      { id: "r61", title: "케이준 치킨 샐러드", category: "양식", time: "15분", difficulty: "초급", ingredients: ["닭고기", "계란"], description: "바삭한 치킨과 상큼한 채소의 만남", steps: ["남은 치킨이나 텐더를 따뜻하게 구워 썰어둡니다.", "신선한 야채 위에 치킨과 허니머스타드를 뿌립니다."], tip: "삶은 계란을 슬라이스해 올리세요." },
+      { id: "r62", title: "리코타 치즈 샐러드", category: "양식", time: "10분", difficulty: "초급", ingredients: ["치즈", "식빵"], description: "고소한 치즈와 발사믹 드레싱의 조화", steps: ["샐러드 채소를 그릇에 담습니다.", "리코타 치즈를 얹고 구운 식빵 조각을 곁들입니다."], tip: "견과류를 뿌리면 더욱 고소합니다." },
+      { id: "r63", title: "수제 함박 스테이크", category: "양식", time: "30분", difficulty: "보통", ingredients: ["소고기", "돼지고기", "양파", "계란"], description: "육즙이 팡팡 터지는 부드러운 함박 스테이크", steps: ["다진 고기와 볶은 양파, 계란을 치대어 패티를 만듭니다.", "팬에 속까지 노릇하게 구운 뒤 반숙 계란을 올립니다."], tip: "돈까스소스와 케첩을 졸여 소스를 만드세요." },
+      { id: "r64", title: "찹스테이크", category: "양식", time: "20분", difficulty: "쉬움", ingredients: ["소고기", "양파", "버섯", "당근"], description: "한입 크기로 야채와 볶아낸 스테이크", steps: ["소고기와 야채를 깍둑썰기합니다.", "돈까스 소스, 굴소스, 케첩으로 만든 소스에 볶아냅니다."], tip: "고기를 센 불에 빠르게 익혀 육즙을 가두세요." },
+      { id: "r65", title: "바삭 돈까스", category: "일식", time: "25분", difficulty: "보통", ingredients: ["돼지고기", "계란"], description: "겉은 바삭 속은 촉촉한 돈까스", steps: ["돼지고기를 두드려 밑간한 뒤 밀가루, 계란, 빵가루를 입힙니다.", "노릇하게 튀겨 소스와 곁들입니다."], tip: "빵가루에 물을 살짝 스프레이하면 더 바삭합니다." },
+      { id: "r66", title: "가츠동 (돈까스 덮밥)", category: "일식", time: "15분", difficulty: "쉬움", ingredients: ["돈까스", "양파", "계란", "대파"], description: "돈까스에 달콤한 계란 소스를 얹은 덮밥", steps: ["간장, 설탕, 물 육수에 양파를 넣고 끓입니다.", "구운 돈까스를 올리고 계란물을 살짝 풀어 익힙니다."], tip: "계란을 완전히 익히지 않아야 부드럽습니다." },
+      { id: "r67", title: "규동 (일본식 소고기 덮밥)", category: "일식", time: "15분", difficulty: "초급", ingredients: ["소고기", "양파", "계란", "대파"], description: "얇은 소고기살에 달큰한 양념이 배어든 덮밥", steps: ["간장 소스에 양파와 얇은 소고기를 끓여냅니다.", "밥 위에 올리고 노른자나 스크램블을 올려 완성합니다."], tip: "생강절임(베니쇼가)을 올리면 일식 느낌이 납니다." },
+      { id: "r68", title: "오야코동 (닭고기 계란 덮밥)", category: "일식", time: "15분", difficulty: "초급", ingredients: ["닭고기", "계란", "양파", "대파"], description: "부모와 자식이 함께 만난 달콤 부드러운 덮밥", steps: ["닭고기와 양파를 쯔유 육수에 졸입니다.", "계란물을 두 번 나누어 부어 촉촉하게 완성합니다."], tip: "닭다리살을 사용하면 부드럽습니다." },
+      { id: "r69", title: "사케동 (연어 덮밥)", category: "일식", time: "10분", difficulty: "초급", ingredients: ["연어", "양파"], description: "신선한 연어와 와사비의 깔끔한 조합", steps: ["밥에 식초, 설탕 양념(단초밥)을 합니다.", "얇게 썬 연어를 얹고 간장 양파와 와사비를 올립니다."], tip: "연어를 쯔유에 살짝 재워둬도 좋습니다." },
+      { id: "r70", title: "볶음 야키소바", category: "일식", time: "15분", difficulty: "쉬움", ingredients: ["돼지고기", "양파", "마늘", "굴소스"], description: "짭조름한 소스에 볶아낸 일본식 볶음면", steps: ["돼지고기와 채소를 볶습니다.", "면과 굴소스, 간장 소스를 넣어 자작하게 볶아냅니다."], tip: "마요네즈와 가쓰오부시를 올리면 완성도가 높아집니다." },
+      { id: "r71", title: "데리야끼 야키토리 (닭꼬치)", category: "일식", time: "20분", difficulty: "보통", ingredients: ["닭고기", "대파"], description: "닭고기와 대파를 번갈아 꿴 인기 안주", steps: ["닭고기와 대파를 꼬치에 꿰어 구워냅니다.", "달콤 데리야끼 소스를 발라가며 노릇하게 굽습니다."], tip: "파가 살짝 탈 정도로 구워야 향이 좋습니다." },
+      { id: "r72", title: "오코노미야키", category: "일식", time: "25분", difficulty: "보통", ingredients: ["돼지고기", "계란", "오징어"], description: "양배추와 고기가 듬뿍 들어간 일본식 부침개", steps: ["채썬 양배추와 해물/고기, 계란, 반죽을 섞어 두껍게 굽습니다.", "돈까스 소스, 마요네즈를 뿌립니다."], tip: "가쓰오부시를 올려 춤추듯 플레이팅하세요." },
+      { id: "r73", title: "타코야키 (냉동 활용)", category: "일식", time: "10분", difficulty: "초급", ingredients: [], description: "에어프라이어로 완성하는 바삭 타코야키", steps: ["냉동 타코야키를 에어프라이어에 180도 10분 구워냅니다.", "데리야끼 소스, 마요네즈, 가쓰오부시를 올립니다."], tip: "파채를 올려 파타코로 즐겨보세요." },
+      { id: "r74", title: "미소시루 (일본식 된장국)", category: "일식", time: "8분", difficulty: "초급", ingredients: ["두부", "대파"], description: "초간단 자극 없는 부드러운 미소국", steps: ["육수를 끓인 뒤 불을 끄고 미소 된장을 풀어줍니다.", "두부와 대파를 넣어 가볍게 익힙니다."], tip: "미소 된장은 팔팔 끓이면 풍미가 떨어지니 마지막에 넣으세요." },
+      { id: "r75", title: "매콤 마파두부", category: "중식", time: "15분", difficulty: "쉬움", ingredients: ["두부", "돼지고기", "대파", "마늘", "고추", "굴소스"], description: "두반장 없이도 만드는 매콤 알싸한 마파두부", steps: ["다진 고기와 마늘, 대파를 고춧가루에 볶습니다.", "물과 굴소스, 두부를 넣고 전분물로 농도를 맞춥니다."], tip: "밥 위에 부어 마파두부밥으로 즐기세요." },
+      { id: "r76", title: "토달볶 (토마토 달걀 볶음)", category: "중식", time: "8분", difficulty: "초급", ingredients: ["계란", "대파"], description: "영양 만점 다이어터 인기 중식 반찬", steps: ["계란 스크램블을 만들어 따로 둡니다.", "토마토와 대파를 볶다가 계란을 함께 섞어 굴소스 간을 합니다."], tip: "전분물을 살짝 넣으면 촉촉해집니다." },
+      { id: "r77", title: "중화 계란 볶음면 (차오멘)", category: "중식", time: "12분", difficulty: "초급", ingredients: ["계란", "양파", "대파", "굴소스"], description: "굴소스 향이 솔솔 나는 불맛 볶음면", steps: ["대파와 계란을 볶아 파기름과 스크램블을 만듭니다.", "삶은 면과 굴소스, 간장을 넣어 센 불에 볶습니다."], tip: "고추기름을 살짝 두르면 매콤해집니다." },
+      { id: "r78", title: "칼칼 짬뽕 라면", category: "중식", time: "12분", difficulty: "초급", ingredients: ["오징어", "돼지고기", "양파", "대파", "고추"], description: "고깃집 불맛을 입힌 프리미엄 라면", steps: ["돼지고기, 오징어, 채소를 고춧가루와 볶아 불맛을 냅니다.", "물을 붓고 라면과 스프를 넣어 칼칼하게 끓입니다."], tip: "다진 마늘 반 스푼을 더해 풍미를 끌어올리세요." },
+      { id: "r79", title: "고추잡채 & 꽃빵", category: "중식", time: "20분", difficulty: "보통", ingredients: ["돼지고기", "양파", "고추", "굴소스"], description: "아삭한 피망과 돼지고기 채볶음", steps: ["돼지고기 채와 야채 채를 준비합니다.", "센 불에 고기와 야채를 굴소스, 고추기름으로 볶습니다."], tip: "꽃빵을 스팀에 싸서 함께 드세요." },
+      { id: "r80", title: "깐풍기 (닭고기 활용)", category: "중식", time: "20분", difficulty: "보통", ingredients: ["닭고기", "대파", "마늘", "고추"], description: "새콤 매콤 달콤 삼박자 양념 닭요리", steps: ["바삭하게 튀긴 닭고기를 준비합니다.", "간장, 식초, 설탕, 고추로 소스를 끓여 닭고기를 버무립니다."], tip: "나초나 견과류를 곁들이면 더 바삭합니다." },
+      { id: "r81", title: "유린기", category: "중식", time: "20분", difficulty: "보통", ingredients: ["닭고기", "대파", "고추"], description: "상큼한 간장 소스를 자작하게 부어먹는 닭튀김", steps: ["바삭한 닭튀김 아래 양상추를 깔아줍니다.", "간장, 식초, 청양고추 소스를 시원하게 부어줍니다."], tip: "청양고추를 듬뿍 넣어야 튀김의 느끼함이 잡힙니다." },
+      { id: "r82", title: "라볶이", category: "간식", time: "15분", difficulty: "초급", ingredients: ["떡", "어묵", "대파", "계란"], description: "라면사리가 들어가 더욱 맛있는 떡볶이", steps: ["떡볶이 국물 베이스를 끓여 떡과 어묵을 넣습니다.", "라면 사리를 넣고 자작하게 끓여 계란을 올립니다."], tip: "치즈를 사르르 녹여 드세요." },
+      { id: "r83", title: "기름 떡볶이", category: "간식", time: "12분", difficulty: "초급", ingredients: ["떡", "대파"], description: "통인시장 스타일 고소 바삭한 떡볶이", steps: ["떡을 말랑하게 데친 후 물기를 뺍니다.", "고춧가루, 간장, 설탕, 참기름으로 버무린 후 기름에 볶습니다."], tip: "약불에서 은근히 볶아야 양념이 타지 않습니다." },
+      { id: "r84", title: "꾸덕 로제 떡볶이", category: "간식", time: "18분", difficulty: "보통", ingredients: ["떡", "스팸", "베이컨", "우유", "치즈"], description: "크림과 고추장의 상티 조화 로제 떡볶이", steps: ["베이컨과 스팸을 볶다가 고추장, 우유를 넣습니다.", "떡을 넣고 치즈를 녹여 꾸덕하게 끓여냅니다."], tip: "중국당면을 넣으면 인기가 배가 됩니다." },
+      { id: "r85", title: "바삭 김말이 튀김", category: "간식", time: "15분", difficulty: "초급", ingredients: ["김치"], description: "떡볶이 국물에 찍어먹는 최애 튀김", steps: ["불린 당면에 간장 양념을 한 뒤 김에 쌉니다.", "튀김옷을 입혀 노릇하게 튀겨냅니다."], tip: "시판 김말이를 에어프라이어에 돌려도 좋습니다." },
+      { id: "r86", title: "길거리 토스트", category: "간식", time: "10분", difficulty: "초급", ingredients: ["식빵", "계란", "양파", "당근", "스팸"], description: "설탕 팍팍 뿌려먹는 추억의 포장마차 토스트", steps: ["채채소와 계란을 섞어 부침 패티를 만듭니다.", "구운 식빵 사이에 패티, 케첩, 설탕을 올려 완성합니다."], tip: "설탕을 듬뿍 뿌리는 것이 길거리 토스트의 핵심입니다." },
+      { id: "r87", title: "에그드랍 스타일 샌드위치", category: "간식", time: "12분", difficulty: "초급", ingredients: ["식빵", "계란", "치즈", "베이컨", "우유"], description: "몽글몽글 두꺼운 스크램블 토스트", steps: ["식빵을 두껍게 잘라 가운데 칼집을 냅니다.", "우유 넣은 스크램블과 베이컨, 칠리마요 소스를 채웁니다."], tip: "연유나 잼을 살짝 바르면 더 단짠입니다." },
+      { id: "r88", title: "참치 마요 샌드위치", category: "간식", time: "8분", difficulty: "초급", ingredients: ["식빵", "참치", "양파"], description: "도시락으로 딱 좋은 고소한 참치 샌드위치", steps: ["기름 뺀 참치와 다진 양파, 마요네즈, 후추를 섞습니다.", "식빵 사이에 듬뿍 올리고 먹기 좋게 자릅니다."], tip: "식빵 테두리를 자르면 훨씬 부드럽습니다." },
+      { id: "r89", title: "고소 콘치즈", category: "간식", time: "10분", difficulty: "초급", ingredients: ["치즈", "마요네즈"], description: "횟집 필수 스키다시 단짠 안주", steps: ["옥수수 콘의 물기를 빼고 마요네즈, 설탕과 섞습니다.", "팬이나 에어프라이어에 치즈를 가득 올려 녹입니다."], tip: "버터를 팬에 먼저 바르면 더욱 고소합니다." },
+      { id: "r90", title: "추억의 떡꼬치", category: "간식", time: "10분", difficulty: "초급", ingredients: ["떡"], description: "새콤달콤 빨간 양념의 추억 학교 앞 간식", steps: ["떡을 꼬치에 꿰어 기름에 바삭하게 구워냅니다.", "케첩, 고추장, 올리고당 소스를 앞뒤로 바릅니다."], tip: "떡을 겉바속촉하게 구워주는 게 핵심입니다." },
+      { id: "r91", title: "휴게소 소떡소떡", category: "간식", time: "10분", difficulty: "초급", ingredients: ["떡"], description: "소세지와 떡을 한입에 같이 먹는 재미", steps: ["소세지와 떡을 교대로 꼬치에 꿥니다.", "기름에 구운 뒤 치킨 양념 소스나 머스타드를 뿌립니다."], tip: "소세지와 떡을 동시에 입에 넣고 씹으세요." },
+      { id: "r92", title: "영양 비빔밥", category: "한식", time: "20분", difficulty: "쉬움", ingredients: ["계란", "콩나물", "시금치", "당근", "버섯"], description: "냉털 채소를 한데 모아 비벼먹는 한 그릇", steps: ["각종 나물과 야채를 살짝 볶거나 데쳐 준비합니다.", "밥 위에 야채, 반숙 계란, 고추장, 참기름을 올려 비빕니다."], tip: "돌솥이나 팬에 데워 누룽지를 만들어 드세요." },
+      { id: "r93", title: "묵은지 참치 김밥", category: "한식", time: "20분", difficulty: "보통", ingredients: ["김치", "참치", "계란"], description: "개운한 묵은지와 담백 참치의 꿀조합", steps: ["씻은 묵은지의 물기를 꼭 짭니다.", "참치마요와 밥, 묵은지를 김에 말아 참기름을 바릅니다."], tip: "묵은지를 들기름에 살짝 볶아 써도 좋습니다." },
+      { id: "r94", title: "계란 폭탄 키토 김밥", category: "간식", time: "20분", difficulty: "보통", ingredients: ["계란", "당근", "치즈"], description: "밥 대신 계란지단으로 가득 채운 다이어트 김밥", steps: ["계란을 얇게 지단 채로 한가득 썰어둡니다.", "김 위에 계란 지단을 듬뿍 깔고 야채와 치즈를 말아냅니다."], tip: "김밥을 썰 때 칼에 참기름을 바르세요." },
+      { id: "r95", title: "팽이버섯 베이컨 말이", category: "간식", time: "12분", difficulty: "초급", ingredients: ["버섯", "베이컨"], description: "한입에 쏙 넣어먹는 핑거 푸드 안주", steps: ["팽이버섯을 적당량 떼어 베이컨으로 말아줍니다.", "팬에 접합 부분이 아래로 가도록 노릇하게 구워냅니다."], tip: "굴소스를 살짝 부어 졸여도 맛있습니다." },
+      { id: "r96", title: "치킨 마요 덮밥", category: "일식", time: "10분", difficulty: "초급", ingredients: ["닭고기", "계란", "양파"], description: "남은 치킨을 완벽하게 재활용하는 메뉴", steps: ["남은 치킨을 잘게 찢어 따뜻하게 데웁니다.", "계란 스크램블, 간장 양파, 치킨, 마요네즈를 올립니다."], tip: "데리야끼 소스를 함께 뿌려주세요." },
+      { id: "r97", title: "훈제오리 야채볶음", category: "한식", time: "15분", difficulty: "초급", ingredients: ["양파", "대파", "마늘", "버섯"], description: "담백하고 고소한 훈제오리 구이", steps: ["팬에 훈제오리를 볶다가 기름을 살짝 걸러냅니다.", "마늘, 양파, 대파를 함께 넣어 자작하게 볶습니다."], tip: "머스타드 소스에 찍어 드세요." },
+      { id: "r98", title: "굴소스 청경채 볶음", category: "중식", time: "8분", difficulty: "초급", ingredients: ["청경채", "마늘", "굴소스"], description: "아삭함과 감칠맛이 살아있는 건강 반찬", steps: ["마늘 슬라이스를 기름에 볶아 향을 냅니다.", "청경채와 굴소스를 넣고 센 불에 1분간 빠르게 볶습니다."], tip: "너무 오래 볶지 않아야 아삭합니다." },
+      { id: "r99", title: "골뱅이 소면 무침", category: "한식", time: "18분", difficulty: "쉬움", ingredients: ["골뱅이", "양파", "대파", "고추"], description: "매콤새콤한 양념에 소면을 말아먹는 술안주", steps: ["골뱅이와 채소 채를 준비합니다.", "초고추장, 고춧가루 양념에 버무린 뒤 소면을 곁들입니다."], tip: "골뱅이 통조림 국물을 1스푼 양념에 넣으세요." },
+      { id: "r100", title: "스팸 계란 덮밥", category: "한식", time: "10분", difficulty: "초급", ingredients: ["스팸", "계란", "대파"], description: "자취생 최고의 친구 초간단 덮밥", steps: ["스팸을 깍둑썰기해 노릇하게 볶습니다.", "밥 위에 스팸과 반숙 프라이, 대파, 간장을 올립니다."], tip: "참기름 한 방울로 고소함을 더하세요." },
+      { id: "r101", title: "감자 베이컨 스쿨 스프", category: "양식", time: "20분", difficulty: "쉬움", ingredients: ["감자", "베이컨", "양파", "우유"], description: "포슬포슬 감자를 갈아 만든 영양 스프", steps: ["삶은 감자를 으깨어 양파, 우유와 함께 끓입니다.", "소금, 후추로 간하고 구운 베이컨 칩을 뿌립니다."], tip: "치즈 한 장을 녹이면 풍미가 두 배가 됩니다." },
+      { id: "r102", title: "얼큰 차돌 된장찌개", category: "한식", time: "20분", difficulty: "쉬움", ingredients: ["소고기", "두부", "호박", "대파", "마늘"], description: "고기 기름이 고소하게 퍼지는 고깃집 된장찌개", steps: ["차돌박이나 소고기를 볶다가 육수와 된장을 풀어줍니다.", "두부와 버섯, 고추를 넣어 얼큰하게 끓여냅니다."], tip: "고기를 먼저 바싹 볶아 기름을 내는 게 포인트입니다." },
+      { id: "r103", title: "베이컨 알리오 올리오", category: "양식", time: "15분", difficulty: "초급", ingredients: ["파스타면", "베이컨", "마늘", "고추"], description: "베이컨의 짭조름함이 돋보이는 오일 파스타", steps: ["마늘과 베이컨을 올리브유에 노릇하게 볶습니다.", "삶은 면과 페퍼론치노, 면수를 넣고 자작하게 졸입니다."], tip: "통후추를 듬뿍 갈아 넣으세요." },
+      { id: "r104", title: "시금치 계란 볶음", category: "간식", time: "8분", difficulty: "초급", ingredients: ["시금치", "계란", "마늘"], description: "건강하고 부드러운 초간단 브런치 반찬", steps: ["마늘을 볶다가 시금치와 계란물을 부어 스크램블합니다.", "소금, 후추로 간하여 불을 끕니다."], tip: "버터에 볶아내면 더욱 풍미가 좋아집니다." },
+      { id: "r105", title: "달달 콘치즈 또띠아 피자", category: "간식", time: "10분", difficulty: "초급", ingredients: ["치즈", "마요네즈"], description: "콘치즈를 또띠아에 얹은 톡톡 씹히는 피자", steps: ["또띠아 위에 콘치즈 반죽을 얇게 폅니다.", "피자치즈를 더 올리고 180도 7분간 구워냅니다."], tip: "파슬리를 살짝 뿌려 연출하세요." }
+    ];
+
+    // State Variables
+    let state = {
+      selectedIngredients: new Set(["김치", "돼지고기", "계란"]),
+      likedRecipes: new Set(),
+      dislikedRecipes: new Set(),
+      searchTerm: "",
+      currentPage: 1,
+      pageSize: 12,
+      lastRandomList: []
+    };
+
+    function initApp() {
+      document.getElementById('footer-recipe-count').innerText = RECIPES_DATA.length;
+      renderQuickIngredients();
+      updateSelectedTags();
+      renderSynergyRecommendations();
+      renderRecipes(true);
+    }
+
+    // Ingredient Toggles
+    function toggleIngredient(ingName) {
+      if (state.selectedIngredients.has(ingName)) {
+        state.selectedIngredients.delete(ingName);
+      } else {
+        state.selectedIngredients.add(ingName);
+      }
+      onIngredientsChanged();
+    }
+
+    function handleAddCustomIngredient(e) {
+      e.preventDefault();
+      const input = document.getElementById('ingredient-input');
+      const val = input.value.trim();
+      if (val) {
+        val.split(',').map(s => s.trim()).filter(Boolean).forEach(i => state.selectedIngredients.add(i));
+        input.value = '';
+        onIngredientsChanged();
+      }
+    }
+
+    function removeIngredient(ingName) {
+      state.selectedIngredients.delete(ingName);
+      onIngredientsChanged();
+    }
+
+    function resetIngredients() {
+      state.selectedIngredients.clear();
+      onIngredientsChanged();
+    }
+
+    function resetAll() {
+      state.selectedIngredients = new Set(["김치", "돼지고기", "계란"]);
+      state.likedRecipes.clear();
+      state.dislikedRecipes.clear();
+      document.getElementById('search-input').value = "";
+      state.searchTerm = "";
+      document.getElementById('category-filter').value = "all";
+      document.getElementById('sort-select').value = "match";
+      onIngredientsChanged();
+    }
+
+    function resetSearchAndFilters() {
+      document.getElementById('search-input').value = "";
+      state.searchTerm = "";
+      document.getElementById('category-filter').value = "all";
+      document.getElementById('sort-select').value = "match";
+      renderRecipes(true);
+    }
+
+    function onIngredientsChanged() {
+      updateSelectedTags();
+      renderQuickIngredients();
+      renderSynergyRecommendations();
+      renderRecipes(true);
+    }
+
+    function handleSearchInput() {
+      state.searchTerm = document.getElementById('search-input').value.trim().toLowerCase();
+      renderRecipes(true);
+    }
+
+    function updateSelectedTags() {
+      const container = document.getElementById('selected-tags');
+      if (state.selectedIngredients.size === 0) {
+        container.innerHTML = `<span class="text-xs text-slate-400 italic">선택된 재료가 없습니다. 아래에서 원하는 재료를 선택해보세요!</span>`;
+        return;
+      }
+
+      container.innerHTML = Array.from(state.selectedIngredients).map(ing => `
+        <span class="inline-flex items-center gap-1 px-2.5 py-1 bg-brand-500 text-white text-xs font-semibold rounded-full shadow-sm">
+          <span>${ing}</span>
+          <button onclick="removeIngredient('${ing}')" class="hover:text-amber-200 ml-0.5">
+            <i class="fa-solid fa-xmark text-[10px]"></i>
+          </button>
+        </span>
+      `).join('');
+    }
+
+    function renderQuickIngredients() {
+      const container = document.getElementById('quick-ingredients');
+      container.innerHTML = ALL_INGREDIENTS.map(ing => {
+        const isSelected = state.selectedIngredients.has(ing);
+        return `
+          <button 
+            onclick="toggleIngredient('${ing}')"
+            class="px-2.5 py-1 text-xs rounded-lg font-medium transition-all ${
+              isSelected 
+                ? 'bg-slate-800 text-white shadow-sm font-bold' 
+                : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
+            }"
+          >
+            ${isSelected ? '✓ ' : ''}${ing}
+          </button>
+        `;
+      }).join('');
+    }
+
+    function renderSynergyRecommendations() {
+      const box = document.getElementById('synergy-box');
+      const container = document.getElementById('synergy-list');
+      const selectedArr = Array.from(state.selectedIngredients);
+
+      if (selectedArr.length === 0) {
+        box.classList.add('hidden');
+        return;
+      }
+
+      let counts = {};
+      selectedArr.forEach(ing => {
+        if (INGREDIENT_SYNERGY[ing]) {
+          INGREDIENT_SYNERGY[ing].forEach(syn => {
+            if (!state.selectedIngredients.has(syn)) {
+              counts[syn] = (counts[syn] || 0) + 1;
+            }
+          });
+        }
+      });
+
+      const sorted = Object.keys(counts).sort((a,b) => counts[b] - counts[a]);
+
+      if (sorted.length === 0) {
+        box.classList.add('hidden');
+        return;
+      }
+
+      box.classList.remove('hidden');
+      container.innerHTML = sorted.slice(0, 6).map(syn => `
+        <button 
+          onclick="toggleIngredient('${syn}')"
+          class="px-2.5 py-1 bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-900 text-xs font-semibold rounded-lg transition-colors flex items-center gap-1"
+        >
+          <i class="fa-solid fa-plus text-[9px] text-amber-600"></i>
+          <span>${syn}</span>
+        </button>
+      `).join('');
+    }
+
+    function getFilteredAndSortedRecipes() {
+      const sortType = document.getElementById('sort-select').value;
+      const categoryFilter = document.getElementById('category-filter').value;
+
+      let list = RECIPES_DATA.map(recipe => {
+        const matched = recipe.ingredients.filter(i => state.selectedIngredients.has(i));
+        const matchRatio = recipe.ingredients.length > 0 ? matched.length / recipe.ingredients.length : 0;
+        const isLiked = state.likedRecipes.has(recipe.id);
+        const isDisliked = state.dislikedRecipes.has(recipe.id);
+
+        return {
+          ...recipe,
+          matched,
+          matchRatio,
+          isLiked,
+          isDisliked
+        };
+      });
+
+      // Filter disliked & category
+      list = list.filter(r => !r.isDisliked);
+      if (categoryFilter !== 'all') {
+        list = list.filter(r => r.category.includes(categoryFilter));
+      }
+
+      // Filter text search
+      if (state.searchTerm) {
+        list = list.filter(r => 
+          r.title.toLowerCase().includes(state.searchTerm) || 
+          r.ingredients.some(i => i.toLowerCase().includes(state.searchTerm)) ||
+          r.description.toLowerCase().includes(state.searchTerm)
+        );
+      }
+
+      // Sort
+      list.sort((a, b) => {
+        if (sortType === 'preference') {
+          if (a.isLiked !== b.isLiked) return b.isLiked ? 1 : -1;
+          return b.matchRatio - a.matchRatio;
+        } else if (sortType === 'time') {
+          return parseInt(a.time) - parseInt(b.time);
+        } else if (sortType === 'title') {
+          return a.title.localeCompare(b.title, 'ko');
+        } else {
+          // match ratio
+          if (b.matched.length !== a.matched.length) {
+            return b.matched.length - a.matched.length;
+          }
+          return b.matchRatio - a.matchRatio;
+        }
+      });
+
+      return list;
+    }
+
+    function renderRecipes(resetPagination = false) {
+      if (resetPagination) {
+        state.currentPage = 1;
+      }
+
+      const container = document.getElementById('recipe-grid');
+      const emptyState = document.getElementById('empty-state');
+      const badge = document.getElementById('recipe-count-badge');
+      const loadMoreContainer = document.getElementById('load-more-container');
+      const loadMoreCount = document.getElementById('load-more-count');
+
+      const allFiltered = getFilteredAndSortedRecipes();
+      badge.innerText = `${allFiltered.length}개`;
+
+      if (allFiltered.length === 0) {
+        container.innerHTML = '';
+        emptyState.classList.remove('hidden');
+        loadMoreContainer.classList.add('hidden');
+        return;
+      }
+
+      emptyState.classList.add('hidden');
+
+      const visibleCount = state.currentPage * state.pageSize;
+      const visibleList = allFiltered.slice(0, visibleCount);
+
+      if (visibleCount < allFiltered.length) {
+        loadMoreContainer.classList.remove('hidden');
+        loadMoreCount.innerText = allFiltered.length - visibleCount;
+      } else {
+        loadMoreContainer.classList.add('hidden');
+      }
+
+      container.innerHTML = visibleList.map(r => {
+        return `
+          <div class="bg-white rounded-2xl border ${r.isLiked ? 'border-brand-400 ring-2 ring-brand-500/10' : 'border-slate-200'} shadow-sm hover:shadow-md transition-all overflow-hidden flex flex-col justify-between">
+            <div class="p-4">
+              <div class="flex justify-between items-start mb-2">
+                <span class="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md">${r.category}</span>
+                <span class="text-[11px] font-extrabold ${r.matched.length > 0 ? 'text-emerald-600 bg-emerald-50' : 'text-slate-400 bg-slate-50'} px-2 py-0.5 rounded-full">
+                  재료 ${r.matched.length}/${r.ingredients.length}개
+                </span>
+              </div>
+
+              <h4 class="font-bold text-slate-900 text-sm hover:text-brand-600 transition-colors cursor-pointer flex items-center gap-1" onclick="openRecipeModal('${r.id}')">
+                ${r.title}
+                ${r.isLiked ? '<i class="fa-solid fa-heart text-rose-500 text-xs"></i>' : ''}
+              </h4>
+              <p class="text-xs text-slate-500 mt-1 line-clamp-2">${r.description}</p>
+
+              <!-- Ingredient Tags -->
+              <div class="mt-3 pt-2.5 border-t border-slate-100 flex flex-wrap gap-1">
+                ${r.ingredients.map(ing => {
+                  const has = state.selectedIngredients.has(ing);
+                  return `
+                    <span class="text-[10px] px-1.5 py-0.5 rounded ${has ? 'bg-brand-50 text-brand-700 font-bold' : 'bg-slate-100 text-slate-400'}">
+                      ${ing}
+                    </span>
+                  `;
+                }).join('')}
+              </div>
+            </div>
+
+            <div class="px-4 py-2.5 bg-slate-50 border-t border-slate-100 flex items-center justify-between text-xs">
+              <span class="text-slate-400"><i class="fa-regular fa-clock mr-1"></i>${r.time}</span>
+
+              <div class="flex items-center gap-1">
+                <button onclick="voteRecipe('${r.id}', 'like', event)" class="p-1 text-slate-400 hover:text-emerald-600 ${r.isLiked ? 'text-emerald-600 font-bold' : ''}" title="좋아요">
+                  <i class="fa-solid fa-thumbs-up"></i>
+                </button>
+                <button onclick="voteRecipe('${r.id}', 'dislike', event)" class="p-1 text-slate-400 hover:text-rose-500" title="관심없음">
+                  <i class="fa-solid fa-thumbs-down"></i>
+                </button>
+                <button onclick="openRecipeModal('${r.id}')" class="ml-1 px-2.5 py-1 bg-brand-500 hover:bg-brand-600 text-white font-bold rounded-lg text-[11px] transition-colors">
+                  레시피
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function loadMoreRecipes() {
+      state.currentPage++;
+      renderRecipes(false);
+    }
+
+    function pickRandomGlobal() {
+      if (RECIPES_DATA.length === 0) return;
+      const randomIndex = Math.floor(Math.random() * RECIPES_DATA.length);
+      const recipe = RECIPES_DATA[randomIndex];
+      showRandomModal(recipe);
+    }
+
+    function pickRandomFromSelected() {
+      let matchedRecipes = RECIPES_DATA.filter(r => {
+        return r.ingredients.some(ing => state.selectedIngredients.has(ing));
+      });
+
+      if (matchedRecipes.length === 0) {
+        matchedRecipes = RECIPES_DATA;
+      }
+
+      state.lastRandomList = matchedRecipes;
+      const randomIndex = Math.floor(Math.random() * matchedRecipes.length);
+      const recipe = matchedRecipes[randomIndex];
+      showRandomModal(recipe);
+    }
+
+    function rerunRandomPick() {
+      const list = state.lastRandomList.length > 0 ? state.lastRandomList : RECIPES_DATA;
+      const randomIndex = Math.floor(Math.random() * list.length);
+      const card = document.getElementById('random-modal-card');
+      
+      card.classList.add('shake-animation');
+      setTimeout(() => card.classList.remove('shake-animation'), 500);
+
+      showRandomModal(list[randomIndex]);
+    }
+
+    function showRandomModal(recipe) {
+      const modal = document.getElementById('random-modal');
+      const title = document.getElementById('random-title');
+      const desc = document.getElementById('random-desc');
+      const matchInfo = document.getElementById('random-match-info');
+      const ingredientsSummary = document.getElementById('random-ingredients-summary');
+      const viewBtn = document.getElementById('random-view-btn');
+
+      title.innerText = recipe.title;
+      desc.innerText = recipe.description;
+
+      const matchedCount = recipe.ingredients.filter(i => state.selectedIngredients.has(i)).length;
+      matchInfo.innerText = `선택한 재료 중 ${matchedCount}/${recipe.ingredients.length}개 보유 중!`;
+      ingredientsSummary.innerText = `주요 재료: ${recipe.ingredients.join(', ')}`;
+
+      viewBtn.onclick = function() {
+        modal.classList.add('hidden');
+        openRecipeModal(recipe.id);
+      };
+
+      modal.classList.remove('hidden');
+    }
+
+    // Voting System
+    function voteRecipe(id, type, event) {
+      if (event) event.stopPropagation();
+
+      if (type === 'like') {
+        if (state.likedRecipes.has(id)) state.likedRecipes.delete(id);
+        else {
+          state.likedRecipes.add(id);
+          state.dislikedRecipes.delete(id);
+        }
+      } else if (type === 'dislike') {
+        if (state.dislikedRecipes.has(id)) state.dislikedRecipes.delete(id);
+        else {
+          state.dislikedRecipes.add(id);
+          state.likedRecipes.delete(id);
+        }
+      }
+
+      renderRecipes(false);
+      const modal = document.getElementById('recipe-modal');
+      if (!modal.classList.contains('hidden') && modal.dataset.currentId === id) {
+        renderModalVoteButtons(id);
+      }
+    }
+
+    // Modal View Details
+    function openRecipeModal(recipeId) {
+      const recipe = RECIPES_DATA.find(r => r.id === recipeId);
+      if (!recipe) return;
+
+      const modal = document.getElementById('recipe-modal');
+      modal.dataset.currentId = recipeId;
+
+      document.getElementById('modal-category').innerText = recipe.category;
+      document.getElementById('modal-title').innerText = recipe.title;
+      document.getElementById('modal-desc').innerText = recipe.description;
+      document.getElementById('modal-time').innerText = recipe.time;
+      document.getElementById('modal-difficulty').innerText = recipe.difficulty;
+      document.getElementById('modal-tip').innerText = recipe.tip || "재료 손질에 유의하여 맛있는 요리를 만들어보세요.";
+
+      // Ingredients
+      document.getElementById('modal-ingredients').innerHTML = recipe.ingredients.map(ing => {
+        const has = state.selectedIngredients.has(ing);
+        return `
+          <span class="px-2 py-0.5 text-xs rounded-md font-semibold border ${has ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-slate-50 border-slate-200 text-slate-400'}">
+            ${has ? '✓ ' : ''}${ing}
+          </span>
+        `;
+      }).join('');
+
+      // Steps
+      document.getElementById('modal-steps').innerHTML = recipe.steps.map((step, idx) => `
+        <li class="flex gap-2">
+          <span class="font-bold text-brand-500">${idx + 1}.</span>
+          <span>${step}</span>
+        </li>
+      `).join('');
+
+      renderModalVoteButtons(recipeId);
+      modal.classList.remove('hidden');
+    }
+
+    function renderModalVoteButtons(recipeId) {
+      const box = document.getElementById('modal-vote-btns');
+      const isLiked = state.likedRecipes.has(recipeId);
+      const isDisliked = state.dislikedRecipes.has(recipeId);
+
+      box.innerHTML = `
+        <button onclick="voteRecipe('${recipeId}', 'like')" class="px-2.5 py-1 text-xs rounded-lg font-bold flex items-center gap-1 ${isLiked ? 'bg-emerald-500 text-white' : 'bg-slate-200 text-slate-600'}">
+          <i class="fa-solid fa-thumbs-up"></i> 좋아요
+        </button>
+        <button onclick="voteRecipe('${recipeId}', 'dislike')" class="px-2.5 py-1 text-xs rounded-lg font-bold flex items-center gap-1 ${isDisliked ? 'bg-rose-500 text-white' : 'bg-slate-200 text-slate-600'}">
+          <i class="fa-solid fa-thumbs-down"></i> 관심없음
+        </button>
+      `;
+    }
+
+    function closeRecipeModal() {
+      document.getElementById('recipe-modal').classList.add('hidden');
+    }
+
+    // 🌟 Download Recipe Database Functionality
+    function exportRecipesJSON() {
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(RECIPES_DATA, null, 2));
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.setAttribute("href", dataStr);
+      downloadAnchor.setAttribute("download", `pick_and_cook_105_recipes_${new Date().toISOString().slice(0,10)}.json`);
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+    }
+
+    window.onload = function() {
+      initApp();
+    };
+  </script>
+</body>
+</html>
